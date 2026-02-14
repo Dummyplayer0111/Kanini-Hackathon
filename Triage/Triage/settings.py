@@ -61,6 +61,10 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
 ]
 
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = False
+
+
 
 ROOT_URLCONF = 'Triage.urls'
 
@@ -128,6 +132,3 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-LOGIN_URL = '/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/'
