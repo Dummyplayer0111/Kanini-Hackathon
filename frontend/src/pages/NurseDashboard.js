@@ -1,55 +1,84 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
+      if (cookie.startsWith(name + "=")) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
 
 function NurseDashboard() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
+  // Protect route
+  useEffect(() => {
+    fetch("http://localhost:8000/api/user-role/", {
+      credentials: "include",
+    })
+      .then(res => {
+        if (!res.ok) navigate("/");
+        return res.json();
+      })
+      .then(roleData => {
+        if (roleData.role !== "nurse") navigate("/");
+      });
+  }, [navigate]);
 
+  // Load dashboard data
   useEffect(() => {
     fetch("http://localhost:8000/api/nurse-dashboard/", {
-      credentials: "include"
+      credentials: "include",
     })
-          .then(res => res.json())
+      .then(res => res.json())
       .then(result => {
-        if (Array.isArray(result)) {
-          setData(result);
-        } else {
-          setError(result.error || "Not authorized");
-        }
+        if (Array.isArray(result)) setData(result);
         setLoading(false);
       })
-      .catch(err => {
-        setError("Server error");
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return <h3 style={{ padding: "20px" }}>Loading...</h3>;
-  }
+  const handleLogout = async () => {
+    const csrfToken = getCookie("csrftoken");
 
-  if (error) {
-    return <h3 style={{ padding: "20px", color: "red" }}>{error}</h3>;
-  }
+    await fetch("http://localhost:8000/api/logout/", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "X-CSRFToken": csrfToken,
+      },
+    });
+
+    navigate("/");
+  };
+
+  if (loading) return <h3 style={{ padding: "20px" }}>Loading...</h3>;
 
   return (
     <div style={{ padding: "20px" }}>
       <h2>Nurse Dashboard</h2>
+      <button onClick={handleLogout}>Logout</button>
 
       {data.length === 0 ? (
         <p>No triage requests found.</p>
       ) : (
         data.map(item => (
-          <div
-            key={item.id}
-            style={{
-              marginBottom: "15px",
-              border: "1px solid #ccc",
-              padding: "10px",
-              borderRadius: "5px"
-            }}
-          >
+          <div key={item.id} style={{
+            marginTop: "15px",
+            border: "1px solid #ccc",
+            padding: "10px",
+            borderRadius: "5px"
+          }}>
             <p><strong>Symptoms:</strong> {item.symptoms}</p>
             <p><strong>Blood Pressure:</strong> {item.blood_pressure}</p>
             <p><strong>Heart Rate:</strong> {item.heart_rate}</p>
