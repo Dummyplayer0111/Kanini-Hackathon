@@ -25,7 +25,7 @@ function Login() {
 
   // Auto redirect if already logged in
   useEffect(() => {
-    fetch("http://localhost:8000/api/user-role/", {
+    fetch("http://192.168.18.207:8000/api/user-role/", {
       credentials: "include",
     })
       .then(res => {
@@ -48,7 +48,7 @@ function Login() {
     try {
       const csrfToken = getCookie("csrftoken");
 
-      const response = await fetch("http://localhost:8000/api/login/", {
+      const response = await fetch("http://192.168.18.207:8000/api/login/", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -65,7 +65,7 @@ function Login() {
         return;
       }
 
-      const roleResponse = await fetch("http://localhost:8000/api/user-role/", {
+      const roleResponse = await fetch("http://192.168.18.207:8000/api/user-role/", {
         credentials: "include",
       });
 
