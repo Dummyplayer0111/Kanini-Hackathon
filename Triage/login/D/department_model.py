@@ -1,9 +1,12 @@
 import pandas as pd
 import joblib
 
-# Load once at startup
-department_model = joblib.load("department_model.pkl")
-department_features = joblib.load("department_model_features.pkl")
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+department_model = joblib.load(os.path.join(BASE_DIR, "department_model.pkl"))
+department_features = joblib.load(os.path.join(BASE_DIR, "department_model_features.pkl"))
 
 def predict_department(input_row):
 

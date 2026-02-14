@@ -14,6 +14,12 @@ from rest_framework import status
 from django.contrib.auth.models import User
 from django.db.models import Count
 from .models import TriageRequest, StaffProfile, Patient, EmergencyRequest
+from rest_framework.decorators import (
+    api_view,
+    permission_classes,
+    parser_classes,
+    authentication_classes,   # ← ADD THIS
+)
 
 from sentence_transformers import SentenceTransformer, util
 import torch
@@ -22,6 +28,9 @@ import tempfile
 import os
 from rest_framework.authentication import SessionAuthentication
 from .D.department_model import predict_department
+from .D.risk_model_v2 import predict_risk
+
+
 class CsrfExemptSessionAuthentication(SessionAuthentication):
     def enforce_csrf(self, request):
         return  # 🚀 disables CSRF check
@@ -670,7 +679,6 @@ def triage_request_create(request):
         if val is not None:
             symptom_kwargs[field] = bool(val)
 
-
     model_input = {
         "Age": patient.age,
         "Gender": patient.gender,
@@ -678,8 +686,6 @@ def triage_request_create(request):
         "Heart_Rate": heart_rate,
         "Temperature": temperature,
         "Oxygen": oxygen,
-        "Risk": predicted_risk,
-
         "Chest_Pain": symptom_kwargs.get("chest_pain", False),
         "Severe_Breathlessness": symptom_kwargs.get("severe_breathlessness", False),
         "Sudden_Confusion": symptom_kwargs.get("sudden_confusion", False),
@@ -722,8 +728,57 @@ def triage_request_create(request):
         "Previous_Hospitalization": patient.previous_hospitalization,
     }
 
-
-    prediction = predict_department(model_input)
+    risk_result = predict_risk(model_input)
+    predicted_risk = risk_result["Risk"]
+    model_input2 = {
+        "Age": patient.age,
+        "Gender": patient.gender,
+        "Systolic_BP": systolic_bp,
+        "Heart_Rate": heart_rate,
+        "Temperature": temperature,
+        "Oxygen": oxygen,
+        "Chest_Pain": symptom_kwargs.get("chest_pain", False),
+        "Severe_Breathlessness": symptom_kwargs.get("severe_breathlessness", False),
+        "Sudden_Confusion": symptom_kwargs.get("sudden_confusion", False),
+        "Stroke_Symptoms": symptom_kwargs.get("stroke_symptoms", False),
+        "Seizure": symptom_kwargs.get("seizure", False),
+        "Severe_Trauma": symptom_kwargs.get("severe_trauma", False),
+        "Uncontrolled_Bleeding": symptom_kwargs.get("uncontrolled_bleeding", False),
+        "Loss_of_Consciousness": symptom_kwargs.get("loss_of_consciousness", False),
+        "Severe_Allergic_Reaction": symptom_kwargs.get("severe_allergic_reaction", False),
+        "Persistent_Fever": symptom_kwargs.get("persistent_fever", False),
+        "Vomiting": symptom_kwargs.get("vomiting", False),
+        "Moderate_Abdominal_Pain": symptom_kwargs.get("moderate_abdominal_pain", False),
+        "Persistent_Cough": symptom_kwargs.get("persistent_cough", False),
+        "Moderate_Breathlessness": symptom_kwargs.get("moderate_breathlessness", False),
+        "Severe_Headache": symptom_kwargs.get("severe_headache", False),
+        "Dizziness": symptom_kwargs.get("dizziness", False),
+        "Dehydration": symptom_kwargs.get("dehydration", False),
+        "Palpitations": symptom_kwargs.get("palpitations", False),
+        "Migraine": symptom_kwargs.get("migraine", False),
+        "Mild_Headache": symptom_kwargs.get("mild_headache", False),
+        "Sore_Throat": symptom_kwargs.get("sore_throat", False),
+        "Runny_Nose": symptom_kwargs.get("runny_nose", False),
+        "Mild_Cough": symptom_kwargs.get("mild_cough", False),
+        "Fatigue": symptom_kwargs.get("fatigue", False),
+        "Body_Ache": symptom_kwargs.get("body_ache", False),
+        "Mild_Abdominal_Pain": symptom_kwargs.get("mild_abdominal_pain", False),
+        "Skin_Rash": symptom_kwargs.get("skin_rash", False),
+        "Mild_Back_Pain": symptom_kwargs.get("mild_back_pain", False),
+        "Mild_Joint_Pain": symptom_kwargs.get("mild_joint_pain", False),
+        "Risk": predicted_risk,
+        "Diabetes": patient.diabetes,
+        "Hypertension": patient.hypertension,
+        "Heart_Disease": patient.heart_disease,
+        "Asthma": patient.asthma,
+        "Chronic_Kidney_Disease": patient.chronic_kidney_disease,
+        "Previous_Stroke": patient.previous_stroke,
+        "Smoker": patient.smoker,
+        "Obese": patient.obese,
+        "Previous_Heart_Attack": patient.previous_heart_attack,
+        "Previous_Hospitalization": patient.previous_hospitalization,
+    }
+    prediction = predict_department(model_input2)
 
     predicted_department = prediction["Department"]
     confidence = prediction["Confidence"]
@@ -736,15 +791,15 @@ def triage_request_create(request):
             "heart_rate": int(heart_rate),
             "temperature": float(temperature),
             "oxygen": int(oxygen),
-            "predicted_risk": data.get("predicted_risk", ""),
-            "recommended_department": data.get("recommended_department", ""),
+            "predicted_risk": predicted_risk,
+            "recommended_department": predicted_department,
             **symptom_kwargs,
         }
     )
 
 
     # Auto-assign to least-loaded doctor in department if available
-    dept = data.get("recommended_department", "")
+    dept = predicted_department
     if dept:
         doctors = User.objects.filter(
             groups__name='Doctors'
@@ -766,5 +821,5 @@ def triage_request_create(request):
         "assigned_doctor": (
             triage.assigned_doctor.get_full_name() or triage.assigned_doctor.username
         ) if triage.assigned_doctor else None,
-"       message": "Triage request created." if created else "Triage request updated."
+        "message": "Triage request created." if created else "Triage request updated."
     }, status=status.HTTP_201_CREATED)

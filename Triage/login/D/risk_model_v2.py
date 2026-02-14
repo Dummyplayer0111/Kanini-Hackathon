@@ -1,9 +1,15 @@
 import pandas as pd
 import joblib
 
-# Load once at startup
-risk_model = joblib.load("triage_model.pkl")
-risk_features = joblib.load("model_features.pkl")
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+risk_model = joblib.load(os.path.join(BASE_DIR, "triage_model.pkl"))
+risk_features = joblib.load(os.path.join(BASE_DIR, "model_features.pkl"))
+
+def predict_risk_dummy(input_row, top_n=8, threshold=10):
+    print(input_row)
 
 def predict_risk(input_row, top_n=8, threshold=10):
 
@@ -42,7 +48,10 @@ def predict_risk(input_row, top_n=8, threshold=10):
 
     # Compute contribution scores
     importances = risk_model.feature_importances_
-    contribution_scores = df.iloc[0] * importances
+# Ensure numeric before multiplication
+    numeric_row = df.iloc[0].astype(float)
+    contribution_scores = numeric_row * importances
+
 
     contribution_df = pd.DataFrame({
         "Feature": risk_features,
