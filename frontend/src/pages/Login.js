@@ -1,5 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import DnaAnimation from "../components/DnaAnimation";
+import "./Login.css";
 
 function getCookie(name) {
   let cookieValue = null;
@@ -17,15 +20,16 @@ function getCookie(name) {
 }
 
 function Login() {
-  const [username, setUsername] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
 
   // Auto redirect if already logged in
   useEffect(() => {
-    fetch("http://192.168.18.207:8000/api/user-role/", {
+    fetch("http://localhost:8000/api/user-role/", {
       credentials: "include",
     })
       .then(res => {
@@ -48,14 +52,14 @@ function Login() {
     try {
       const csrfToken = getCookie("csrftoken");
 
-      const response = await fetch("http://192.168.18.207:8000/api/login/", {
+      const response = await fetch("http://localhost:8000/api/login/", {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
           "X-CSRFToken": csrfToken,
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ employee_id: employeeId, password }),
       });
 
       const data = await response.json();
@@ -65,7 +69,7 @@ function Login() {
         return;
       }
 
-      const roleResponse = await fetch("http://192.168.18.207:8000/api/user-role/", {
+      const roleResponse = await fetch("http://localhost:8000/api/user-role/", {
         credentials: "include",
       });
 
@@ -81,30 +85,91 @@ function Login() {
   };
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h2>Login</h2>
+    <div className="login-page">
+      {/* Mobile-only: DNA animation as full-screen background */}
+      <div className="login-mobile-bg">
+        <DnaAnimation />
+      </div>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {/* Desktop: DNA animation in left panel */}
+      <div className="login-left">
+        <DnaAnimation />
+      </div>
 
-      <form onSubmit={handleLogin}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          required
-        />
-        <br /><br />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        <br /><br />
-        <button type="submit">Login</button>
-      </form>
+      {/* Right panel — form */}
+      <div className="login-right">
+        {/* Logo icon */}
+        <div className="login-logo">
+          <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <rect x="18" y="4" width="12" height="30" rx="3" fill="white" />
+            <rect x="6" y="12" width="36" height="12" rx="3" fill="white" />
+            <ellipse cx="36" cy="38" rx="6" ry="3" fill="none" stroke="white" strokeWidth="1.5" />
+            <ellipse cx="36" cy="42" rx="6" ry="3" fill="none" stroke="white" strokeWidth="1.5" />
+          </svg>
+        </div>
+
+        {/* Login form card */}
+        <div className="login-card">
+          <form onSubmit={handleLogin}>
+            <div className="form-group">
+              <label>Employee ID</label>
+              <div className="input-wrapper">
+                <input
+                  type="text"
+                  value={employeeId}
+                  onChange={e => setEmployeeId(e.target.value)}
+                  placeholder="e.g. EMP-A1B2C3"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <div className="input-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {error && <p className="login-error">{error}</p>}
+
+            <button type="submit" className="login-btn">
+              Login
+            </button>
+          </form>
+        </div>
+
+        {/* Branding */}
+        <div className="login-branding">
+          <h1>Apex Health</h1>
+          <p>Medicine Redefined</p>
+        </div>
+      </div>
     </div>
   );
 }

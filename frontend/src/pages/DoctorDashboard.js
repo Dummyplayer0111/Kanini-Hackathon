@@ -23,7 +23,7 @@ function DoctorDashboard() {
 
   // Protect route
   useEffect(() => {
-    fetch("http://192.168.18.207:8000/api/user-role/", {
+    fetch("http://localhost:8000/api/user-role/", {
       credentials: "include",
     })
       .then(res => {
@@ -37,7 +37,7 @@ function DoctorDashboard() {
 
   // Load data
   useEffect(() => {
-    fetch("http://192.168.18.207:8000/api/doctor-dashboard/", {
+    fetch("http://localhost:8000/api/doctor-dashboard/", {
       credentials: "include",
     })
       .then(res => res.json())
@@ -51,7 +51,7 @@ function DoctorDashboard() {
   const handleLogout = async () => {
     const csrfToken = getCookie("csrftoken");
 
-    await fetch("http://192.168.18.207:8000/api/logout/", {
+    await fetch("http://localhost:8000/api/logout/", {
       method: "POST",
       credentials: "include",
       headers: {

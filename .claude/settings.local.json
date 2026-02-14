@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx react-scripts build)"
+      "Bash(npx react-scripts build)",
+      "Bash(./mkcert.exe:*)",
+      "Bash(python manage.py migrate:*)"
     ]
   }
 }

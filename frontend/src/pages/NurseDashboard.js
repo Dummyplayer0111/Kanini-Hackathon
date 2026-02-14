@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "./NurseDashboard.css";
 
 function getCookie(name) {
   let cookieValue = null;
@@ -16,32 +17,62 @@ function getCookie(name) {
   return cookieValue;
 }
 
+function getRiskClass(risk) {
+  if (!risk) return "risk-unknown";
+  const r = risk.toLowerCase();
+  if (r === "high" || r === "critical") return "risk-high";
+  if (r === "moderate" || r === "medium") return "risk-moderate";
+  if (r === "low") return "risk-low";
+  return "risk-unknown";
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function NurseDashboard() {
   const [data, setData] = useState([]);
+  const [nurseName, setNurseName] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Protect route
+  // Protect route + get nurse name
   useEffect(() => {
-    fetch("http://192.168.18.207:8000/api/user-role/", {
+    fetch("http://localhost:8000/api/user-role/", {
       credentials: "include",
     })
-      .then(res => {
-        if (!res.ok) navigate("/");
+      .then((res) => {
+        if (!res.ok) {
+          navigate("/");
+          return null;
+        }
         return res.json();
       })
-      .then(roleData => {
-        if (roleData.role !== "nurse") navigate("/");
+      .then((roleData) => {
+        if (!roleData) return;
+        if (roleData.role !== "nurse") {
+          navigate("/");
+          return;
+        }
+        setNurseName(roleData.name || "");
       });
   }, [navigate]);
 
   // Load dashboard data
   useEffect(() => {
-    fetch("http://192.168.18.207:8000/api/nurse-dashboard/", {
+    fetch("http://localhost:8000/api/nurse-dashboard/", {
       credentials: "include",
     })
-      .then(res => res.json())
-      .then(result => {
+      .then((res) => res.json())
+      .then((result) => {
         if (Array.isArray(result)) setData(result);
         setLoading(false);
       })
@@ -50,43 +81,160 @@ function NurseDashboard() {
 
   const handleLogout = async () => {
     const csrfToken = getCookie("csrftoken");
-
-    await fetch("http://192.168.18.207:8000/api/logout/", {
+    await fetch("http://localhost:8000/api/logout/", {
       method: "POST",
       credentials: "include",
-      headers: {
-        "X-CSRFToken": csrfToken,
-      },
+      headers: { "X-CSRFToken": csrfToken },
     });
-
     navigate("/");
   };
 
-  if (loading) return <h3 style={{ padding: "20px" }}>Loading...</h3>;
+  if (loading) return <div className="nurse-loading">Loading...</div>;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Nurse Dashboard</h2>
-      <button onClick={handleLogout}>Logout</button>
+    <div className="nurse-page">
+      {/* Header */}
+      <header className="nurse-header">
+        <div
+          className="nurse-header-left"
+          onClick={() => navigate("/nurse")}
+          style={{ cursor: "pointer" }}
+        >
+          <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <rect x="18" y="4" width="12" height="30" rx="3" fill="white" />
+            <rect x="6" y="12" width="36" height="12" rx="3" fill="white" />
+            <ellipse
+              cx="36"
+              cy="38"
+              rx="6"
+              ry="3"
+              fill="none"
+              stroke="white"
+              strokeWidth="1.5"
+            />
+            <ellipse
+              cx="36"
+              cy="42"
+              rx="6"
+              ry="3"
+              fill="none"
+              stroke="white"
+              strokeWidth="1.5"
+            />
+          </svg>
+          <span>Apex Health</span>
+        </div>
+        <div className="nurse-header-right">
+          <span className="nurse-name">
+            Nurse: <strong>{nurseName}</strong>
+          </span>
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
+      </header>
 
-      {data.length === 0 ? (
-        <p>No triage requests found.</p>
-      ) : (
-        data.map(item => (
-          <div key={item.id} style={{
-            marginTop: "15px",
-            border: "1px solid #ccc",
-            padding: "10px",
-            borderRadius: "5px"
-          }}>
-            <p><strong>Symptoms:</strong> {item.symptoms}</p>
-            <p><strong>Blood Pressure:</strong> {item.blood_pressure}</p>
-            <p><strong>Heart Rate:</strong> {item.heart_rate}</p>
-            <p><strong>Temperature:</strong> {item.temperature}</p>
-            <p><strong>Risk:</strong> {item.predicted_risk}</p>
+      {/* Main */}
+      <main className="nurse-main">
+        {/* Action Buttons */}
+        <div className="nurse-actions">
+          <button
+            className="action-btn action-btn-emergency"
+            onClick={() => navigate("/nurse/emergency")}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+            Emergency Cases
+          </button>
+          <button
+            className="action-btn action-btn-inpatient"
+            onClick={() => navigate("/nurse/inpatients")}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            Inpatients
+          </button>
+        </div>
+
+        {/* Triage Requests */}
+        <h2 className="section-title">Triage Requests</h2>
+
+        {data.length === 0 ? (
+          <p className="no-data">No triage requests found.</p>
+        ) : (
+          <div className="triage-grid">
+            {data.map((item) => (
+              <div key={item.id} className="triage-card">
+                <div className="triage-card-header">
+                  <div>
+                    <div className="patient-name">
+                      {item.patient_name || `Patient #${item.id}`}
+                    </div>
+                    <div className="patient-meta">
+                      {item.patient_age && `${item.patient_age} yrs`}
+                      {item.patient_gender && ` · ${item.patient_gender}`}
+                    </div>
+                  </div>
+                  <span
+                    className={`risk-badge ${getRiskClass(item.predicted_risk)}`}
+                  >
+                    {item.predicted_risk || "Pending"}
+                  </span>
+                </div>
+
+                <div className="vitals-grid">
+                  <div className="vital-item">
+                    <div className="vital-label">BP</div>
+                    <div className="vital-value">{item.systolic_bp || "—"}</div>
+                  </div>
+                  <div className="vital-item">
+                    <div className="vital-label">HR</div>
+                    <div className="vital-value">{item.heart_rate || "—"}</div>
+                  </div>
+                  <div className="vital-item">
+                    <div className="vital-label">Temp</div>
+                    <div className="vital-value">
+                      {item.temperature ? `${item.temperature}°` : "—"}
+                    </div>
+                  </div>
+                  <div className="vital-item">
+                    <div className="vital-label">O2</div>
+                    <div className="vital-value">
+                      {item.oxygen ? `${item.oxygen}%` : "—"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="triage-card-footer">
+                  <span className="department">
+                    {item.recommended_department || "Unassigned"}
+                  </span>
+                  <span className="timestamp">
+                    {formatDate(item.created_at)}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-        ))
-      )}
+        )}
+      </main>
     </div>
   );
 }

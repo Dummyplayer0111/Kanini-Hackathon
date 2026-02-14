@@ -11,4 +11,20 @@ urlpatterns = [
     # 🔹 Dashboard APIs
     path('api/nurse-dashboard/', views.nurse_dashboard_api),
     path('api/doctor-dashboard/', views.doctor_dashboard_api),
+
+    # 🔹 Patient APIs
+    path('api/inpatient-analyze/', views.inpatient_analyze),
+    path('api/patient/search/', views.patient_search),
+    path('api/patient/create/', views.patient_create),
+
+    # 🔹 Emergency APIs
+    path('api/doctors/', views.doctors_by_department),
+    path('api/emergency/confirm/', views.emergency_confirm),
+
+    # 🔹 Triage ML API
+    path('api/whisper/', views.whisper_transcribe),
+    path('api/triage/', views.triage_api),
+
+    # 🔹 Triage Request CRUD
+    path('api/triage-request/create/', views.triage_request_create),
 ]
