@@ -23,7 +23,7 @@ function NurseDashboard() {
 
   // Protect route
   useEffect(() => {
-    fetch("http://localhost:8000/api/user-role/", {
+    fetch("http://192.168.18.207:8000/api/user-role/", {
       credentials: "include",
     })
       .then(res => {
@@ -37,7 +37,7 @@ function NurseDashboard() {
 
   // Load dashboard data
   useEffect(() => {
-    fetch("http://localhost:8000/api/nurse-dashboard/", {
+    fetch("http://192.168.18.207:8000/api/nurse-dashboard/", {
       credentials: "include",
     })
       .then(res => res.json())
@@ -51,7 +51,7 @@ function NurseDashboard() {
   const handleLogout = async () => {
     const csrfToken = getCookie("csrftoken");
 
-    await fetch("http://localhost:8000/api/logout/", {
+    await fetch("http://192.168.18.207:8000/api/logout/", {
       method: "POST",
       credentials: "include",
       headers: {
