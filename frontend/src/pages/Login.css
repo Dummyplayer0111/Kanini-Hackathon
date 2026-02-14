@@ -1,0 +1,293 @@
+/* ========== Full-viewport page ========== */
+.login-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ========== Left panel — DNA animation (desktop) ========== */
+.login-left {
+  flex: 0 0 58%;
+  background: linear-gradient(135deg, #0a0a1a 0%, #0d1b2a 50%, #0a0a1a 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Tilt the DNA diagonally: bottom-left to top-right */
+.login-left .dna-container {
+  transform: rotate(35deg) scale(1.4);
+  transform-origin: center center;
+}
+
+/* ========== Right panel — form (desktop) ========== */
+.login-right {
+  flex: 1;
+  background: #0e0e18;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 36px;
+  position: relative;
+}
+
+/* ========== Logo (top-right) ========== */
+.login-logo {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 2;
+}
+
+.login-logo svg {
+  width: 44px;
+  height: 44px;
+  fill: white;
+}
+
+/* ========== White form card ========== */
+.login-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 36px 30px;
+  width: 100%;
+  max-width: 300px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.login-card .form-group {
+  margin-bottom: 20px;
+}
+
+.login-card .form-group:last-of-type {
+  margin-bottom: 24px;
+}
+
+.login-card label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 7px;
+  letter-spacing: 0.2px;
+}
+
+.login-card .input-wrapper {
+  position: relative;
+}
+
+.login-card input[type="text"],
+.login-card input[type="password"],
+.login-card input[type="email"] {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a1a2e;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.login-card input:focus {
+  border-color: #4361ee;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+/* Password eye toggle */
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #4b5563;
+}
+
+.password-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Login button */
+.login-btn {
+  width: 100%;
+  padding: 11px 0;
+  border: 1.5px solid #1a1a2e;
+  border-radius: 8px;
+  background: transparent;
+  color: #1a1a2e;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+  letter-spacing: 0.5px;
+}
+
+.login-btn:hover {
+  background: #1a1a2e;
+  color: #ffffff;
+}
+
+.login-btn:active {
+  transform: scale(0.98);
+}
+
+/* Error message */
+.login-error {
+  color: #ef4444;
+  font-size: 12px;
+  margin: 0 0 12px 0;
+  text-align: center;
+}
+
+/* ========== Branding ========== */
+.login-branding {
+  position: absolute;
+  bottom: 28px;
+  text-align: center;
+  width: 100%;
+  left: 0;
+}
+
+.login-branding h1 {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  margin: 0 0 4px 0;
+  text-transform: uppercase;
+}
+
+.login-branding p {
+  color: #6b7280;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 4px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* ========== Mobile background DNA layer (hidden on desktop) ========== */
+.login-mobile-bg {
+  display: none;
+}
+
+/* ========== MOBILE LAYOUT ========== */
+@media (max-width: 768px) {
+  /* Switch to stacked full-screen with DNA background */
+  .login-page {
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* Hide the desktop left panel */
+  .login-left {
+    display: none;
+  }
+
+  /* Show the mobile full-screen DNA background */
+  .login-mobile-bg {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, #0a0a1a 0%, #0d1b2a 50%, #0a0a1a 100%);
+  }
+
+  /* Vignette overlay for readability */
+  .login-mobile-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(10, 10, 26, 0.25) 0%,
+      rgba(10, 10, 26, 0.65) 70%,
+      rgba(10, 10, 26, 0.85) 100%
+    );
+    pointer-events: none;
+  }
+
+  /* Right panel becomes full-screen overlay */
+  .login-right {
+    flex: 1;
+    min-height: 100vh;
+    background: transparent;
+    z-index: 1;
+    padding: 40px 24px;
+  }
+
+  .login-logo {
+    top: 20px;
+    right: 20px;
+  }
+
+  .login-logo svg {
+    width: 38px;
+    height: 38px;
+    filter: drop-shadow(0 0 10px rgba(0, 180, 216, 0.3));
+  }
+
+  /* Glassmorphism card on mobile */
+  .login-card {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    max-width: 340px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+      0 0 40px rgba(0, 180, 216, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .login-branding {
+    bottom: 24px;
+  }
+
+  .login-branding h1 {
+    text-shadow: 0 0 20px rgba(0, 180, 216, 0.2);
+  }
+}
+
+@media (max-width: 480px) {
+  .login-right {
+    padding: 30px 16px;
+  }
+
+  .login-card {
+    max-width: 100%;
+    padding: 28px 22px;
+  }
+
+  .login-card input[type="text"],
+  .login-card input[type="password"],
+  .login-card input[type="email"] {
+    padding: 10px 12px;
+  }
+
+  .login-branding h1 {
+    font-size: 16px;
+    letter-spacing: 4px;
+  }
+
+  .login-branding p {
+    font-size: 9px;
+    letter-spacing: 3px;
+  }
+}
