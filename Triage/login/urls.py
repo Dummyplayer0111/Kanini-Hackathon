@@ -27,4 +27,9 @@ urlpatterns = [
 
     # 🔹 Triage Request CRUD
     path('api/triage-request/create/', views.triage_request_create),
+
+    # 🔹 Doctor Action APIs
+    path('api/triage-request/<int:triage_id>/resolve/', views.resolve_triage_request),
+    path('api/emergency/<int:emergency_id>/convert/', views.convert_emergency_to_triage),
+    path('api/patient/<int:patient_id>/history/', views.update_patient_history),
 ]

@@ -95,11 +95,7 @@ function NurseDashboard() {
     <div className="nurse-page">
       {/* Header */}
       <header className="nurse-header">
-        <div
-          className="nurse-header-left"
-          onClick={() => navigate("/nurse")}
-          style={{ cursor: "pointer" }}
-        >
+        <div className="nurse-header-left">
           <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
             <rect x="18" y="4" width="12" height="30" rx="3" fill="white" />
             <rect x="6" y="12" width="36" height="12" rx="3" fill="white" />

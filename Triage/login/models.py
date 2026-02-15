@@ -2,11 +2,6 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import User
 
-
-# -------------------------
-# DEPARTMENT CHOICES
-# -------------------------
-
 DEPARTMENT_CHOICES = [
     ("Emergency", "Emergency"),
     ("General_Medicine", "General Medicine"),

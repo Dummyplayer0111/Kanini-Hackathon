@@ -85,6 +85,9 @@ function EmergencyCases() {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(null);
 
+  // Error state (replaces alert())
+  const [errorMsg, setErrorMsg] = useState("");
+
   useEffect(() => {
     fetch("http://localhost:8000/api/user-role/", { credentials: "include" })
       .then((res) => {
@@ -147,10 +150,11 @@ function EmergencyCases() {
 
   const handleCreatePatient = async () => {
     if (!newPatient.full_name.trim() || !newPatient.age || !newPatient.gender) {
-      alert("Name, age, and gender are required.");
+      setErrorMsg("Name, age, and gender are required.");
       return;
     }
     setSaving(true);
+    setErrorMsg("");
     try {
       const csrfToken = getCookie("csrftoken");
       const res = await fetch("http://localhost:8000/api/patient/create/", {
@@ -167,10 +171,10 @@ function EmergencyCases() {
         setSelectedPatient({ ...newPatient, id: result.id });
         setNewPatient({ ...EMPTY_PATIENT });
       } else {
-        alert(result.error || "Failed to create patient.");
+        setErrorMsg(result.error || "Failed to create patient.");
       }
     } catch {
-      alert("Error connecting to server.");
+      setErrorMsg("Error connecting to server.");
     }
     setSaving(false);
   };
@@ -200,17 +204,17 @@ function EmergencyCases() {
           if (data.translated_text) {
             setTranscript(data.translated_text);
           } else {
-            alert(data.error || "Transcription failed. Try recording again.");
+            setErrorMsg(data.error || "Transcription failed. Try recording again.");
           }
         } catch {
-          alert("Error sending audio to server.");
+          setErrorMsg("Error sending audio to server.");
         }
         setTranslating(false);
       };
       recorder.start();
       setIsListening(true);
     } catch {
-      alert("Microphone access denied.");
+      setErrorMsg("Microphone access denied.");
     }
   };
 
@@ -253,6 +257,7 @@ function EmergencyCases() {
     setDoctors([]);
     setSelectedDoctor(null);
     setConfirmed(null);
+    setErrorMsg("");
   };
 
   // ---------- Fetch doctors ----------
@@ -295,6 +300,7 @@ function EmergencyCases() {
   const handleConfirm = async () => {
     if (!selectedDoctor || !chosenDepartment || !selectedPatient) return;
     setConfirming(true);
+    setErrorMsg("");
     try {
       const csrfToken = getCookie("csrftoken");
       const res = await fetch("http://localhost:8000/api/emergency/confirm/", {
@@ -315,10 +321,10 @@ function EmergencyCases() {
       if (res.ok) {
         setConfirmed(result);
       } else {
-        alert(result.error || "Failed to confirm.");
+        setErrorMsg(result.error || "Failed to confirm.");
       }
     } catch {
-      alert("Error connecting to server.");
+      setErrorMsg("Error connecting to server.");
     }
     setConfirming(false);
   };
@@ -809,6 +815,37 @@ function EmergencyCases() {
       </header>
 
       <main className="nurse-main">
+        {/* Error Banner */}
+        {errorMsg && (
+          <div style={{
+            marginBottom: 16,
+            padding: "12px 16px",
+            background: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+            borderRadius: 8,
+            color: "#f87171",
+            fontSize: 14,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
+            <span>{errorMsg}</span>
+            <button
+              onClick={() => setErrorMsg("")}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#f87171",
+                cursor: "pointer",
+                fontSize: 18,
+                padding: "0 4px",
+              }}
+            >
+              x
+            </button>
+          </div>
+        )}
+
         {renderPatientSelection()}
 
         {selectedPatient && !confirmed && (

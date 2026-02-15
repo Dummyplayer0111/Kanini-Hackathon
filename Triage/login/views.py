@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
-
+from django.db import IntegrityError
 from rest_framework.decorators import (
     api_view,
     permission_classes,
@@ -416,11 +416,76 @@ def doctor_dashboard_api(request):
     if not request.user.groups.filter(name='Doctors').exists():
         return Response({"error": "Unauthorized"}, status=403)
 
-    assigned_requests = TriageRequest.objects.filter(
+    # Triage requests with full patient data
+    triage_requests = TriageRequest.objects.filter(
         assigned_doctor=request.user
-    ).values()
+    ).select_related('patient').order_by('-created_at')
 
-    return Response(assigned_requests)
+    triage_data = []
+    for t in triage_requests:
+        entry = {}
+        for field in t._meta.fields:
+            if field.name in ('patient', 'nurse', 'assigned_doctor'):
+                continue
+            entry[field.name] = getattr(t, field.name)
+
+        entry['patient_id'] = t.patient.id
+        entry['patient_name'] = t.patient.full_name
+        entry['patient_age'] = t.patient.age
+        entry['patient_gender'] = t.patient.gender
+        entry['patient_blood_group'] = t.patient.blood_group
+        entry['patient_allergies'] = t.patient.allergies
+        entry['patient_past_surgeries'] = t.patient.past_surgeries
+        entry['patient_diabetes'] = t.patient.diabetes
+        entry['patient_hypertension'] = t.patient.hypertension
+        entry['patient_heart_disease'] = t.patient.heart_disease
+        entry['patient_asthma'] = t.patient.asthma
+        entry['patient_chronic_kidney_disease'] = t.patient.chronic_kidney_disease
+        entry['patient_previous_stroke'] = t.patient.previous_stroke
+        entry['patient_smoker'] = t.patient.smoker
+        entry['patient_obese'] = t.patient.obese
+        entry['patient_previous_heart_attack'] = t.patient.previous_heart_attack
+        entry['patient_previous_hospitalization'] = t.patient.previous_hospitalization
+        entry['nurse_id'] = t.nurse_id
+        entry['assigned_doctor_id'] = t.assigned_doctor_id
+
+        triage_data.append(entry)
+
+    # Emergency requests
+    emergency_requests = EmergencyRequest.objects.filter(
+        doctor=request.user
+    ).select_related('patient').order_by('-created_at')
+
+    emergency_data = []
+    for e in emergency_requests:
+        emergency_data.append({
+            'id': e.id,
+            'patient_id': e.patient.id,
+            'patient_name': e.patient.full_name,
+            'patient_age': e.patient.age,
+            'patient_gender': e.patient.gender,
+            'patient_blood_group': e.patient.blood_group,
+            'patient_allergies': e.patient.allergies,
+            'patient_past_surgeries': e.patient.past_surgeries,
+            'patient_diabetes': e.patient.diabetes,
+            'patient_hypertension': e.patient.hypertension,
+            'patient_heart_disease': e.patient.heart_disease,
+            'patient_asthma': e.patient.asthma,
+            'patient_chronic_kidney_disease': e.patient.chronic_kidney_disease,
+            'patient_previous_stroke': e.patient.previous_stroke,
+            'patient_smoker': e.patient.smoker,
+            'patient_obese': e.patient.obese,
+            'patient_previous_heart_attack': e.patient.previous_heart_attack,
+            'patient_previous_hospitalization': e.patient.previous_hospitalization,
+            'department': e.department,
+            'nurse_id': e.nurse_id,
+            'created_at': e.created_at,
+        })
+
+    return Response({
+        'triage_requests': triage_data,
+        'emergency_requests': emergency_data,
+    })
 
 
 # -------------------------------
@@ -611,12 +676,21 @@ def emergency_confirm(request):
     except User.DoesNotExist:
         return Response({"error": "Doctor not found"}, status=404)
 
-    emergency = EmergencyRequest.objects.create(
-        patient=patient,
-        nurse=request.user,
-        doctor=doctor,
-        department=department,
-    )
+    try:
+        emergency = EmergencyRequest.objects.create(
+            patient=patient,
+            nurse=request.user,
+            doctor=doctor,
+            department=department,
+        )
+    except IntegrityError:
+        return Response(
+            {
+                "error": "This patient already has an active emergency case."
+            },
+            status=status.HTTP_409_CONFLICT
+        )
+
 
     return Response({
         "id": emergency.id,
@@ -823,3 +897,216 @@ def triage_request_create(request):
         ) if triage.assigned_doctor else None,
         "message": "Triage request created." if created else "Triage request updated."
     }, status=status.HTTP_201_CREATED)
+
+
+# -------------------------------
+# Resolve Triage Request
+# -------------------------------
+
+@api_view(['DELETE'])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([AllowAny])
+def resolve_triage_request(request, triage_id):
+    if not request.user.groups.filter(name='Doctors').exists():
+        return Response({"error": "Unauthorized"}, status=403)
+
+    try:
+        triage = TriageRequest.objects.get(id=triage_id, assigned_doctor=request.user)
+    except TriageRequest.DoesNotExist:
+        return Response({"error": "Triage request not found or not assigned to you"}, status=404)
+
+    triage.delete()
+    return Response({"message": "Triage request resolved successfully"})
+
+
+# -------------------------------
+# Convert Emergency to Triage
+# -------------------------------
+
+@api_view(['POST'])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([AllowAny])
+def convert_emergency_to_triage(request, emergency_id):
+    if not request.user.groups.filter(name='Doctors').exists():
+        return Response({"error": "Unauthorized"}, status=403)
+
+    try:
+        emergency = EmergencyRequest.objects.select_related('patient').get(
+            id=emergency_id, doctor=request.user
+        )
+    except EmergencyRequest.DoesNotExist:
+        return Response({"error": "Emergency request not found or not assigned to you"}, status=404)
+
+    data = request.data
+    patient = emergency.patient
+
+    systolic_bp = data.get("systolic_bp", 0)
+    heart_rate = data.get("heart_rate", 0)
+    temperature = data.get("temperature", 0.0)
+    oxygen = data.get("oxygen", 0)
+
+    symptom_fields = [
+        "chest_pain", "severe_breathlessness", "sudden_confusion",
+        "stroke_symptoms", "seizure", "severe_trauma",
+        "uncontrolled_bleeding", "loss_of_consciousness",
+        "severe_allergic_reaction", "persistent_fever", "vomiting",
+        "moderate_abdominal_pain", "persistent_cough",
+        "moderate_breathlessness", "severe_headache", "dizziness",
+        "dehydration", "palpitations", "migraine",
+        "mild_headache", "sore_throat", "runny_nose", "mild_cough",
+        "fatigue", "body_ache", "mild_abdominal_pain", "skin_rash",
+        "mild_back_pain", "mild_joint_pain",
+    ]
+
+    symptom_kwargs = {}
+    for field in symptom_fields:
+        val = data.get(field)
+        if val is not None:
+            symptom_kwargs[field] = bool(val)
+
+    model_input = {
+        "Age": patient.age,
+        "Gender": patient.gender,
+        "Systolic_BP": systolic_bp,
+        "Heart_Rate": heart_rate,
+        "Temperature": temperature,
+        "Oxygen": oxygen,
+        "Chest_Pain": symptom_kwargs.get("chest_pain", False),
+        "Severe_Breathlessness": symptom_kwargs.get("severe_breathlessness", False),
+        "Sudden_Confusion": symptom_kwargs.get("sudden_confusion", False),
+        "Stroke_Symptoms": symptom_kwargs.get("stroke_symptoms", False),
+        "Seizure": symptom_kwargs.get("seizure", False),
+        "Severe_Trauma": symptom_kwargs.get("severe_trauma", False),
+        "Uncontrolled_Bleeding": symptom_kwargs.get("uncontrolled_bleeding", False),
+        "Loss_of_Consciousness": symptom_kwargs.get("loss_of_consciousness", False),
+        "Severe_Allergic_Reaction": symptom_kwargs.get("severe_allergic_reaction", False),
+        "Persistent_Fever": symptom_kwargs.get("persistent_fever", False),
+        "Vomiting": symptom_kwargs.get("vomiting", False),
+        "Moderate_Abdominal_Pain": symptom_kwargs.get("moderate_abdominal_pain", False),
+        "Persistent_Cough": symptom_kwargs.get("persistent_cough", False),
+        "Moderate_Breathlessness": symptom_kwargs.get("moderate_breathlessness", False),
+        "Severe_Headache": symptom_kwargs.get("severe_headache", False),
+        "Dizziness": symptom_kwargs.get("dizziness", False),
+        "Dehydration": symptom_kwargs.get("dehydration", False),
+        "Palpitations": symptom_kwargs.get("palpitations", False),
+        "Migraine": symptom_kwargs.get("migraine", False),
+        "Mild_Headache": symptom_kwargs.get("mild_headache", False),
+        "Sore_Throat": symptom_kwargs.get("sore_throat", False),
+        "Runny_Nose": symptom_kwargs.get("runny_nose", False),
+        "Mild_Cough": symptom_kwargs.get("mild_cough", False),
+        "Fatigue": symptom_kwargs.get("fatigue", False),
+        "Body_Ache": symptom_kwargs.get("body_ache", False),
+        "Mild_Abdominal_Pain": symptom_kwargs.get("mild_abdominal_pain", False),
+        "Skin_Rash": symptom_kwargs.get("skin_rash", False),
+        "Mild_Back_Pain": symptom_kwargs.get("mild_back_pain", False),
+        "Mild_Joint_Pain": symptom_kwargs.get("mild_joint_pain", False),
+        "Diabetes": patient.diabetes,
+        "Hypertension": patient.hypertension,
+        "Heart_Disease": patient.heart_disease,
+        "Asthma": patient.asthma,
+        "Chronic_Kidney_Disease": patient.chronic_kidney_disease,
+        "Previous_Stroke": patient.previous_stroke,
+        "Smoker": patient.smoker,
+        "Obese": patient.obese,
+        "Previous_Heart_Attack": patient.previous_heart_attack,
+        "Previous_Hospitalization": patient.previous_hospitalization,
+    }
+
+    risk_result = predict_risk(model_input)
+    predicted_risk = risk_result["Risk"]
+
+    model_input2 = {**model_input, "Risk": predicted_risk}
+    prediction = predict_department(model_input2)
+    predicted_department = prediction["Department"]
+
+    # Check if patient already has a triage request (OneToOne constraint)
+    if TriageRequest.objects.filter(patient=patient).exists():
+        return Response(
+            {"error": "This patient already has a triage request. Cannot convert."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        triage = TriageRequest.objects.create(
+            patient=patient,
+            nurse=emergency.nurse,
+            assigned_doctor=request.user,
+            systolic_bp=int(systolic_bp),
+            heart_rate=int(heart_rate),
+            temperature=float(temperature),
+            oxygen=int(oxygen),
+            predicted_risk=predicted_risk,
+            recommended_department=predicted_department,
+            **symptom_kwargs,
+        )
+    except IntegrityError:
+        return Response(
+            {"error": "A triage request already exists for this patient."},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    emergency.delete()
+
+    # Build response with full triage data
+    entry = {}
+    for field in triage._meta.fields:
+        if field.name in ('patient', 'nurse', 'assigned_doctor'):
+            continue
+        entry[field.name] = getattr(triage, field.name)
+
+    entry['patient_id'] = patient.id
+    entry['patient_name'] = patient.full_name
+    entry['patient_age'] = patient.age
+    entry['patient_gender'] = patient.gender
+    entry['patient_blood_group'] = patient.blood_group
+    entry['patient_allergies'] = patient.allergies
+    entry['patient_past_surgeries'] = patient.past_surgeries
+    entry['patient_diabetes'] = patient.diabetes
+    entry['patient_hypertension'] = patient.hypertension
+    entry['patient_heart_disease'] = patient.heart_disease
+    entry['patient_asthma'] = patient.asthma
+    entry['patient_chronic_kidney_disease'] = patient.chronic_kidney_disease
+    entry['patient_previous_stroke'] = patient.previous_stroke
+    entry['patient_smoker'] = patient.smoker
+    entry['patient_obese'] = patient.obese
+    entry['patient_previous_heart_attack'] = patient.previous_heart_attack
+    entry['patient_previous_hospitalization'] = patient.previous_hospitalization
+    entry['nurse_id'] = triage.nurse_id
+    entry['assigned_doctor_id'] = triage.assigned_doctor_id
+
+    return Response(entry, status=status.HTTP_201_CREATED)
+
+
+# -------------------------------
+# Update Patient History
+# -------------------------------
+
+@api_view(['PATCH'])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([AllowAny])
+def update_patient_history(request, patient_id):
+    if not request.user.groups.filter(name='Doctors').exists():
+        return Response({"error": "Unauthorized"}, status=403)
+
+    try:
+        patient = Patient.objects.get(id=patient_id)
+    except Patient.DoesNotExist:
+        return Response({"error": "Patient not found"}, status=404)
+
+    data = request.data
+    bool_fields = [
+        'diabetes', 'hypertension', 'heart_disease', 'asthma',
+        'chronic_kidney_disease', 'previous_stroke', 'smoker',
+        'obese', 'previous_heart_attack', 'previous_hospitalization',
+    ]
+    for field in bool_fields:
+        if field in data:
+            setattr(patient, field, bool(data[field]))
+
+    if 'allergies' in data:
+        patient.allergies = data['allergies']
+    if 'past_surgeries' in data:
+        patient.past_surgeries = data['past_surgeries']
+
+    patient.save()
+    return Response({"message": "Patient history updated successfully"})

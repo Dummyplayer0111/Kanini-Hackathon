@@ -244,6 +244,9 @@ function Inpatients() {
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
 
+  // Error state (replaces alert())
+  const [errorMsg, setErrorMsg] = useState("");
+
   useEffect(() => {
     fetch("http://localhost:8000/api/user-role/", { credentials: "include" })
       .then((res) => {
@@ -307,7 +310,7 @@ function Inpatients() {
       const result = await res.json();
 
       if (result.error) {
-        alert(result.error);
+        setErrorMsg(result.error);
         setPdfExtracting(false);
         return;
       }
@@ -324,7 +327,7 @@ function Inpatients() {
 
       setStep("pdf_patient_confirm");
     } catch {
-      alert("Error uploading PDF.");
+      setErrorMsg("Error uploading PDF.");
     }
     setPdfExtracting(false);
   };
@@ -395,10 +398,11 @@ function Inpatients() {
 
   const handleCreatePatient = async () => {
     if (!newPatient.full_name.trim() || !newPatient.age || !newPatient.gender) {
-      alert("Name, age, and gender are required.");
+      setErrorMsg("Name, age, and gender are required.");
       return;
     }
     setSaving(true);
+    setErrorMsg("");
     try {
       const csrfToken = getCookie("csrftoken");
       const res = await fetch("http://localhost:8000/api/patient/create/", {
@@ -420,10 +424,10 @@ function Inpatients() {
         }
         setStep("triage_form");
       } else {
-        alert(result.error || "Failed to create patient.");
+        setErrorMsg(result.error || "Failed to create patient.");
       }
     } catch {
-      alert("Error connecting to server.");
+      setErrorMsg("Error connecting to server.");
     }
     setSaving(false);
   };
@@ -455,17 +459,17 @@ function Inpatients() {
             const matched = matchSymptomsFromText(d.translated_text);
             setSymptoms((prev) => ({ ...prev, ...matched }));
           } else {
-            alert(d.error || "Transcription failed.");
+            setErrorMsg(d.error || "Transcription failed.");
           }
         } catch {
-          alert("Error sending audio to server.");
+          setErrorMsg("Error sending audio to server.");
         }
         setTranslating(false);
       };
       recorder.start();
       setIsListening(true);
     } catch {
-      alert("Microphone access denied.");
+      setErrorMsg("Microphone access denied.");
     }
   };
 
@@ -485,11 +489,12 @@ function Inpatients() {
       !vitals.temperature ||
       !vitals.oxygen
     ) {
-      alert("All vitals (BP, Heart Rate, Temperature, O2) are required.");
+      setErrorMsg("All vitals (BP, Heart Rate, Temperature, O2) are required.");
       return;
     }
     setSubmitting(true);
     setSubmitResult(null);
+    setErrorMsg("");
     try {
       const csrfToken = getCookie("csrftoken");
       const res = await fetch(
@@ -513,10 +518,10 @@ function Inpatients() {
         setSubmitResult(result);
         setStep("done");
       } else {
-        alert(result.error || "Failed to create triage request.");
+        setErrorMsg(result.error || "Failed to create triage request.");
       }
     } catch {
-      alert("Error connecting to server.");
+      setErrorMsg("Error connecting to server.");
     }
     setSubmitting(false);
   };
@@ -535,6 +540,7 @@ function Inpatients() {
     setSubmitResult(null);
     setVitals({ systolic_bp: "", heart_rate: "", temperature: "", oxygen: "" });
     setSymptoms({ ...INITIAL_SYMPTOMS });
+    setErrorMsg("");
   };
 
   if (loading) return <div className="nurse-loading">Loading...</div>;
@@ -695,6 +701,37 @@ function Inpatients() {
       </header>
 
       <main className="nurse-main">
+        {/* Error Banner */}
+        {errorMsg && (
+          <div style={{
+            marginBottom: 16,
+            padding: "12px 16px",
+            background: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+            borderRadius: 8,
+            color: "#f87171",
+            fontSize: 14,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
+            <span>{errorMsg}</span>
+            <button
+              onClick={() => setErrorMsg("")}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#f87171",
+                cursor: "pointer",
+                fontSize: 18,
+                padding: "0 4px",
+              }}
+            >
+              x
+            </button>
+          </div>
+        )}
+
         {/* ===== Step 1: Ask PDF ===== */}
         {step === "ask_pdf" && (
           <>
